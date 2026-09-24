@@ -126,41 +126,33 @@ export function QuickTasksCard({ listId, initialTasks }: QuickTasksCardProps) {
           {incompleteTasks.length} remaining
         </span>
       </div>
-
-      {/* Add input */}
-      {inputOpen ? (
-        <div className="flex items-center gap-2 mt-1">
-          <input
-            ref={inputRef}
-            type="text"
-            value={inputValue}
-            onChange={e => setInputValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Task name..."
-            className="flex-1 text-sm bg-transparent border-b border-mono-400 outline-none py-1 text-mono-800 dark:text-mono-100 placeholder:text-mono-400"
-          />
+      <div className="flex items-center gap-2 mt-1">
+        <input 
+          ref={inputRef}
+          type="text"
+          value={inputValue}
+          onChange={e => setInputValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Task name..."
+          className="flex-1 text-sm bg-transparent border-b border-mono-400 outline-none py-1 text-mono-800 dark:text-mono-100 placeholder:text-mono-400"
+        />
+        <button
+          onClick={handleAdd}
+          disabled={adding || !inputValue.trim()}
+          className="text-xs text-mint-500 hover:underline underline-offset-2 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+        >
+          {adding ? "Adding..." : "Add"}
+        </button>
+        {
+          !adding && 
           <button
-            onClick={handleAdd}
-            disabled={adding || !inputValue.trim()}
-            className="text-xs text-mint-500 hover:underline underline-offset-2 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-          >
-            {adding ? "Adding..." : "Add"}
-          </button>
-          <button
-            onClick={() => { setInputOpen(false); setInputValue(""); }}
+            onClick={() => { setInputValue(""); }}
             className="text-xs text-blush-700/75 hover:underline underline-offset-2 cursor-pointer"
           >
-            Cancel
+            Clear
           </button>
-        </div>
-      ) : (
-        <button
-          onClick={() => setInputOpen(true)}
-          className="text-xs text-mono-400 hover:text-mono-200 text-left cursor-pointer transition-colors"
-        >
-          + Add task
-        </button>
-      )}
+        }
+      </div>
 
       {/* Incomplete tasks */}
       {incompleteTasks.length > 0 && (
