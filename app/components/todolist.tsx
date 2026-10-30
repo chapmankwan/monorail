@@ -10,7 +10,8 @@ import { useRouter } from 'next/navigation';
 import { taskApiHooks } from "@/app/utilities/taskApiHooks";
 import { toSlug } from "@/app/utilities";
 
-import { CheckIcon, ChevronLeftIcon, TrashIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { Types } from "mongoose";
+import { CheckIcon, ChevronLeftIcon, XMarkIcon, EllipsisVerticalIcon } from "@heroicons/react/24/outline";
 
 import clsx from "clsx";
 
@@ -281,6 +282,49 @@ export const TodoList = ({id}: { id:string }) => {
         else return;
     }
 
+    const handleUnselectAllButton = async () => {
+        const completedTasks = tasks.filter((t) => t.completed && t._id);
+        if (completedTasks.length === 0) return;
+
+        const completedIds = new Set(completedTasks.map((t) => t._id));
+
+        // Optimistic update
+        setTasks((prev) =>
+            prev.map((t) =>
+                completedIds.has(t._id) ? { ...t, completed: false, edited: true } : t
+            )
+        );
+
+        // Send updates in parallel; don't let one failure abort the rest
+        const results = await Promise.allSettled(
+            completedTasks.map((task) =>
+                updateTask(id, task._id, { ...task, completed: false, edited: true })
+            )
+        );
+
+        const failedIds = new Set<Types.ObjectId>();
+        const succeeded = new Map<Types.ObjectId, Task>();
+
+        results.forEach((result, i) => {
+            const original = completedTasks[i];
+            if (result.status === "fulfilled") {
+                succeeded.set(original._id, result.value);
+            } else {
+                failedIds.add(original._id);
+                console.error(result.reason);
+            }
+        });
+
+        // Finalize from the backend for successes, revert failures
+        setTasks((prev) =>
+            prev.map((t) => {
+                if (succeeded.has(t._id)) return succeeded.get(t._id)!;
+                if (failedIds.has(t._id)) return { ...t, completed: true };
+                return t;
+            })
+        );
+    };
+
     const CompletionCheck = () => {
         return (
             <span className="flex items-center gap-2 text-sm text-mint-500">
@@ -328,18 +372,26 @@ export const TodoList = ({id}: { id:string }) => {
                 <div className="flex items-center gap-2 ml-auto">
                     <Menu>
                         <MenuButton 
-                            className="inline-flex p-1 rounded cursor-pointer bg-mono-500 hover:bg-mono-400"
+                            className="inline-flex p-1 rounded cursor-pointer bg-lavender-500 hover:bg-lavender-400"
                             onClick={(event) => event.stopPropagation()}
                         >
-                            <TrashIcon className="size-5"/>
+                            <EllipsisVerticalIcon className="size-5"/>
                         </MenuButton>
 
                         <MenuItems
                             transition
                             anchor="left"
-                            className="bg-mono-700 rounded-md"
+                            className="bg-mono-400 rounded-md"
                             onClick={(event) => event.stopPropagation()}
                         >
+                            <MenuItem>
+                                <button 
+                                    className="flex items-center gap-2 cursor-pointer p-2 hover:text-mint-500"
+                                    onClick={handleUnselectAllButton}
+                                >
+                                    unselect all
+                                </button>
+                            </MenuItem>
                             <MenuItem>
                                 <button 
                                     className="flex items-center gap-2 cursor-pointer p-2 hover:text-red-500"
